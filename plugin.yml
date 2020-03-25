@@ -7,5 +7,7 @@ requirements:
 configuration:
   properties:
     cached_folders:
-      type: [ array ]
+      type: array
+    s3_bucket:
+      type: string
   additionalProperties: false

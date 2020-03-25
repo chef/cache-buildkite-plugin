@@ -14,6 +14,7 @@ load "$BATS_PATH/load.bash"
   export BUILDKITE_ORGANIZATION_SLUG="my-org"
   export BUILDKITE_PIPELINE_SLUG="my-pipeline"
   export BUILDKITE_PLUGIN_CACHE_CACHED_FOLDERS_0="my_directory/"
+  export BUILDKITE_PLUGIN_CACHE_S3_BUCKET="my-bucket"
   run "$PWD/hooks/pre-command"
   
   assert_success
@@ -22,6 +23,7 @@ load "$BATS_PATH/load.bash"
   unset BUILDKITE_PLUGIN_CACHE_CACHED_FOLDERS_0
   unset BUILDKITE_PIPELINE_SLUG
   unset BUILDKITE_ORGANIZATION_SLUG
+  unset BUILDKITE_PLUGIN_CACHE_S3_BUCKET
 }
 
 @test "Post-command copies cach to S3" {
@@ -32,6 +34,7 @@ load "$BATS_PATH/load.bash"
   export BUILDKITE_ORGANIZATION_SLUG="my-org"
   export BUILDKITE_PIPELINE_SLUG="my-pipeline"
   export BUILDKITE_PLUGIN_CACHE_CACHED_FOLDERS_0="my_directory/"
+  export BUILDKITE_PLUGIN_CACHE_S3_BUCKET="my-bucket"
   run "$PWD/hooks/post-command"
 
   assert_success
@@ -40,4 +43,5 @@ load "$BATS_PATH/load.bash"
   unset BUILDKITE_PLUGIN_CACHE_CACHED_FOLDERS_0
   unset BUILDKITE_PIPELINE_SLUG
   unset BUILDKITE_ORGANIZATION_SLUG
+  unset BUILDKITE_PLUGIN_CACHE_S3_BUCKET
 }
