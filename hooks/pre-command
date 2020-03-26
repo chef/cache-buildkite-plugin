@@ -1,34 +1,35 @@
 #!/bin/bash
-# shellcheck disable=SC2001
-set -euo pipefail
 
-if [[ "${BUILDKITE_PLUGIN_CACHE_DEBUG:-false}" =~ (true|on|1) ]] ; then
-  set -x
-fi
+DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd)"
 
-if [[ -n "${BUILDKITE_PLUGIN_CACHE_CACHE_KEY:-}" ]] ; then
+# shellcheck disable=SC1090
+. "$DIR/../lib/shared.bash"
 
-  cache_key_prefix=$(echo "$BUILDKITE_PLUGIN_CACHE_CACHE_KEY" | sed -e 's/{.*//')
-  template_value=$(echo "$BUILDKITE_PLUGIN_CACHE_CACHE_KEY" | sed -e 's/^[^\{{]*[^A-Za-z]*//' -e 's/.}}.*$//' | tr -d \' | tr -d \")
+paths=( $(plugin_read_list CACHED_FOLDERS) )
 
-  if [[ $template_value == *"checksum"* ]]; then
-    checksum_argument=$(echo "$template_value" | sed -e 's/checksum*//')
-    function=${template_value/"checksum"/"shasum"}
-    result=$($function | tr -d "$checksum_argument")
-    cache_key="$cache_key_prefix$result"
-  else
-    cache_key=$BUILDKITE_PLUGIN_CACHE_CACHE_KEY
+for path in "${paths[@]}"
+do
+  filename=`echo ${path} |sed 's/\//_/g'`
+
+  # remove trailing '-' from filename
+  if [[ ${filename: -1} == "_" ]]; then
+    filename=${filename::${#filename}-1}
   fi
 
-  if [[ -n "${BUILDKITE_PLUGIN_CACHE_RSYNC_STORAGE}" ]] ; then
-      mkdir -p "${BUILDKITE_PLUGIN_CACHE_RSYNC_STORAGE}/${BUILDKITE_ORGANIZATION_SLUG}/${BUILDKITE_PIPELINE_SLUG}/${cache_key}/"
-      rsync -a "${BUILDKITE_PLUGIN_CACHE_RSYNC_STORAGE}/${BUILDKITE_ORGANIZATION_SLUG}/${BUILDKITE_PIPELINE_SLUG}/${cache_key}/" .
-  else
-      echo ":aws: :amazon-s3: sync ${cache_key}"
+  # remove '/' from label if it exists - only character that breaks S3 pathing
+  BUILDKITE_LABEL=`echo ${BUILDKITE_LABEL} |sed 's/\///g'`
 
-      bucket="${BUILDKITE_PLUGIN_CACHE_S3_BUCKET_NAME}/${BUILDKITE_ORGANIZATION_SLUG}/${BUILDKITE_PIPELINE_SLUG}/${cache_key}"
+  s3_bucket="s3://${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}/${BUILDKITE_PIPELINE_SLUG}/${BUILDKITE_LABEL}"
 
-      aws s3 sync "s3://${bucket}/" . --profile="${BUILDKITE_PLUGIN_CACHE_S3_PROFILE}"
+  aws s3 ls ${s3_bucket}/${filename}.tar.gz
+  rc=$?
+  if [[ ${rc} -eq 0 ]]; then
+    echo "--- :aws: :amazon-s3: cp ${filename}"
+    aws s3 cp "${s3_bucket}/${filename}.tar.gz" "."
+    
+    echo "--- untar into ${path}"
+    tar -xzf ${filename}.tar.gz
+  else 
+    echo "-- skipping :aws: :amazon-s3: cp as ${filename}.tar.gz does not exist in ${s3_bucket}"
   fi
-
-fi
+done
