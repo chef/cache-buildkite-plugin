@@ -18,9 +18,9 @@ do
 
   # remove '/' as it breaks S3 pathing
   # remove ' ' as it breaks aws s3 cp command
-  BUILDKITE_LABEL=`echo ${BUILDKITE_LABEL} |sed 's/\///g' |sed 's/ /_/g'`
+  label=`echo ${BUILDKITE_LABEL} |sed 's/\///g' |sed 's/ /_/g'`
 
-  s3_bucket="s3://${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}/${BUILDKITE_PIPELINE_SLUG}/${BUILDKITE_LABEL}"
+  s3_bucket="s3://${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}/${BUILDKITE_PIPELINE_SLUG}/${label}"
 
   aws s3 ls ${s3_bucket}/${filename}.tar.gz
   rc=$?
