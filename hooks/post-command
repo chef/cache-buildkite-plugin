@@ -21,7 +21,7 @@ do
 
     chmod 600 ${path}
 
-    echo "--- compressing ${path} into tar"
+    echo "--- compressing ${path}"
     sudo tar -czfp ${filename}.tar.gz ${path}
 
     # remove '/' as it breaks S3 pathing
