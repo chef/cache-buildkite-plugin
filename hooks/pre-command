@@ -30,7 +30,7 @@ do
     aws s3 cp "${s3_bucket}/${filename}.tar.gz" "."
     
     echo "--- untar into ${path}"
-    sudo tar -xzfp ${filename}.tar.gz
+    sudo tar -xzf ${filename}.tar.gz
   else 
     echo "-- skipping :aws: :amazon-s3: cp as ${filename}.tar.gz does not exist in ${s3_bucket}"
   fi
