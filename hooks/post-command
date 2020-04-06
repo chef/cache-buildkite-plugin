@@ -22,7 +22,7 @@ do
     chmod 600 ${path}
 
     echo "--- compressing ${path} into tar"
-    tar -czfp ${filename}.tar.gz ${path}
+    sudo tar -czfp ${filename}.tar.gz ${path}
 
     # remove '/' as it breaks S3 pathing
     # remove ' ' as it breaks aws s3 cp command
