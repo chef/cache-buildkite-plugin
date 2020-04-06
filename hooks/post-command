@@ -19,8 +19,10 @@ do
       filename=${filename::${#filename}-1}
     fi
 
+    chmod 600 ${path}
+
     echo "--- compressing ${path} into tar"
-    tar -czf ${filename}.tar.gz ${path}
+    tar -czfp ${filename}.tar.gz ${path}
 
     # remove '/' as it breaks S3 pathing
     # remove ' ' as it breaks aws s3 cp command
