@@ -19,8 +19,6 @@ do
       filename=${filename::${#filename}-1}
     fi
 
-    chmod 600 ${path}
-
     echo "--- compressing ${path}"
     sudo tar -czfp ${filename}.tar.gz ${path}
 
