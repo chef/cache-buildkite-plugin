@@ -23,19 +23,43 @@ do
 
   s3_bucket="s3://${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}/${BUILDKITE_PIPELINE_SLUG}/${label}"
 
+  # check if the tar file exists
   aws s3 ls ${s3_bucket}/${filename}.tar.gz
   rc=$?
   if [[ ${rc} -eq 0 ]]; then
-    echo "--- :aws: :amazon-s3: cp ${filename}"
-    aws s3 cp "${s3_bucket}/${filename}.tar.gz" "."
+    echo "aws s3 cp ${filename}"
+    aws s3 cp ${s3_bucket}/${filename}.tar.gz .
     
-    echo "--- untar into ${path}"
-    if [[ $OSTYPE != "msys" ]] ; then
-      sudo tar -xzf ${filename}.tar.gz	
-    else	
-      tar -xzf ${filename}.tar.gz	
+    # check if the shasum file exists
+    aws s3 ls ${s3_bucket}/${filename}.sha256sum
+    rc=$?
+    if [[ ${rc} -eq 0 ]]; then
+      aws s3 cp ${s3_bucket}/${filename}.sha256sum .
+      shasum -a 256 ${filename}.tar.gz > tmp.sha256sum
+
+      if cmp -s tmp.sha256sum ${filename}.sha256sum; then
+        echo "untar into ${path}"
+        if [[ $OSTYPE != "msys" ]] ; then
+          sudo tar -xzf ${filename}.tar.gz
+        else
+          tar -xzf ${filename}.tar.gz
+        fi
+      else
+        echo "tarball may have been changed or corrupted, skipping extraction"
+      fi
+    else
+      if ! tar -tf vendor.tar.gz > /dev/null; then
+        echo "tarball cannot be opened, may be corrupted, skipping extraction"
+      else
+        echo "untar into ${path}"
+        if [[ $OSTYPE != "msys" ]] ; then
+          sudo tar -xzf ${filename}.tar.gz
+        else
+          tar -xzf ${filename}.tar.gz
+        fi
+      fi
     fi
-  else 
-    echo "-- skipping :aws: :amazon-s3: cp as ${filename}.tar.gz does not exist in ${s3_bucket}"
+  else
+    echo "skipping aws s3 cp as ${filename}.tar.gz does not exist in ${s3_bucket}"
   fi
 done

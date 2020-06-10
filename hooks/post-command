@@ -19,12 +19,15 @@ do
       filename=${filename::${#filename}-1}
     fi
 
-    echo "--- compressing ${path}"
+    echo "compressing ${path}"
     if [[ $OSTYPE != "msys" ]] ; then
-      sudo tar -czf ${filename}.tar.gz ${path}	
-    else	
-      tar -czf ${filename}.tar.gz ${path}	
+      sudo tar -czf ${filename}.tar.gz ${path}
+    else
+      tar -czf ${filename}.tar.gz ${path}
     fi
+
+    echo "getting sha256sum of ${filename}.tar.gz"
+    shasum -a 256 ${filename}.tar.gz > tmp.sha256sum
 
     # remove '/' as it breaks S3 pathing
     # remove ' ' as it breaks aws s3 cp command
@@ -33,9 +36,23 @@ do
 
     s3_bucket="s3://${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}/${BUILDKITE_PIPELINE_SLUG}/${label}"
 
-    echo "--- cp ${filename}.tar.gz into :aws: :amazon-s3:"
-    aws s3 cp "${filename}.tar.gz" "${s3_bucket}/${filename}.tar.gz"
+    aws s3 ls ${s3_bucket}/${filename}.sha256sum
+    rc=$?
+    if [[ ${rc} -eq 0 ]]; then
+      aws s3 cp ${s3_bucket}/${filename}.sha256sum .
+      if cmp -s tmp.sha256sum ${filename}.sha256sum; then
+        echo "skipping upload, shasums are identical"
+      else
+        echo "copying files into s3"
+        aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz
+        aws s3 cp tmp.sha256sum ${s3_bucket}/${filename}.sha256sum
+      fi
+    else
+      echo "copying files into s3"
+      aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz
+      aws s3 cp tmp.sha256sum ${s3_bucket}/${filename}.sha256sum
+    fi
   else
-    echo "--- skipping, ${path} is not a directory"
+    echo "skipping, ${path} is not a directory"
   fi
 done
