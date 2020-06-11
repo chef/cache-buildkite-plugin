@@ -30,7 +30,7 @@ do
 
     echo "comparing checksums..."
     md5s3object="$(aws s3api head-object --bucket "${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}" --key "${BUILDKITE_PIPELINE_SLUG}/${label}/${filename}.tar.gz" | jq -r '.Metadata.md5checksum')"
-    md5localobject="$(openssl md5 "${filename}.tar.gz" |base64)"
+    md5localobject="$(openssl md5 "${filename}.tar.gz" |awk '{print $2}')"
 
     if [[ "${md5s3object}" != "null" ]]; then
       if [[ "${md5s3object}" == "${md5localobject}" ]]; then
