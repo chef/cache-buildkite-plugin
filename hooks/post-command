@@ -25,6 +25,7 @@ do
     fi
 
     md5localobject=$(openssl md5 ${filename}.tar.gz |base64)
+    echo ${md5localobject}
 
     # remove '/' as it breaks S3 pathing
     # remove ' ' as it breaks aws s3 cp command
@@ -38,13 +39,8 @@ do
       echo "comparing checksums..."
       md5s3object=$(aws s3api head-object --bucket ${BUILDKITE_PLUGIN_CACHE_S3_BUCKET} --key ${BUILDKITE_PIPELINE_SLUG}/${label}/${filename}.tar.gz | jq -r '.Metadata.md5checksum')
 
-      if [[ ${md5s3object} != "null" ]]; then
-        if [[ ${md5s3object} == ${md5localobject} ]]; then
-          echo "skipping upload, checksums are identical"
-        else
-          echo "copying cache into s3"
-          aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz --metadata md5checksum=${md5localobject}
-        fi
+      if [[ ${md5s3object} != "null" ]] && [[ ${md5s3object} == ${md5localobject} ]]; then
+        echo "skipping upload, checksums are identical"
       else
         echo "copying cache into s3"
         aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz --metadata md5checksum=${md5localobject}
