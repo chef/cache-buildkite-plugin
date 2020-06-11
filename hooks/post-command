@@ -24,7 +24,7 @@ do
       tar -cf - "${path}" | gzip --no-name > "${filename}.tar.gz"
     fi
 
-    md5localobject="$(openssl md5 "${filename}.tar.gz" |base64 |sed 's/\n//g')"
+    md5localobject="$(openssl md5 "${filename}.tar.gz" |awk '{print $2}')"
 
     # remove '/' as it breaks S3 pathing
     # remove ' ' as it breaks aws s3 cp command
