@@ -10,44 +10,43 @@ paths=( $(plugin_read_list CACHED_FOLDERS) )
 for path in "${paths[@]}"
 do
   # if the path is bad - skip it, don't break things
-  if [[ -d ${path} ]]; then
-    filename=`echo ${path} |sed 's/\//_/g'`
+  if [[ -d "${path}" ]]; then
+    filename=`echo "${path}" |sed 's/\//_/g'`
 
     # remove trailing '-' from filename
-    if [[ ${filename: -1} == "_" ]]; then
-      filename=${filename::${#filename}-1}
+    if [[ "${filename: -1}" == "_" ]]; then
+      filename="${filename::${#filename}-1}"
     fi
 
-    if [[ $OSTYPE != "msys" ]]; then
-      sudo tar -cf - ${path} | gzip --no-name > ${filename}.tar.gz
+    if [[ "${OSTYPE}" != "msys" ]]; then
+      sudo tar -cf - "${path}" | gzip --no-name > "${filename}.tar.gz"
     else
-      tar -cf - ${path} | gzip --no-name > ${filename}.tar.gz
+      tar -cf - "${path}" | gzip --no-name > "${filename}.tar.gz"
     fi
 
-    md5localobject=$(openssl md5 ${filename}.tar.gz |base64)
-    echo ${md5localobject}
+    md5localobject="$(openssl md5 "${filename}.tar.gz" |base64)"
 
     # remove '/' as it breaks S3 pathing
     # remove ' ' as it breaks aws s3 cp command
-    label=${BUILDKITE_LABEL//\//}
-    label=${label// /_}
+    label="${BUILDKITE_LABEL//\//}"
+    label="${label// /_}"
 
     s3_bucket="s3://${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}/${BUILDKITE_PIPELINE_SLUG}/${label}"
 
     # check if the tar file exists
-    if aws s3 ls ${s3_bucket}/${filename}.tar.gz; then
+    if aws s3 ls "${s3_bucket}/${filename}.tar.gz"; then
       echo "comparing checksums..."
-      md5s3object=$(aws s3api head-object --bucket ${BUILDKITE_PLUGIN_CACHE_S3_BUCKET} --key ${BUILDKITE_PIPELINE_SLUG}/${label}/${filename}.tar.gz | jq -r '.Metadata.md5checksum')
+      md5s3object="$(aws s3api head-object --bucket "${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}" --key "${BUILDKITE_PIPELINE_SLUG}/${label}/${filename}.tar.gz" | jq -r '.Metadata.md5checksum')"
 
-      if [[ ${md5s3object} != "null" ]] && [[ ${md5s3object} == ${md5localobject} ]]; then
+      if [[ "${md5s3object}" != "null" ]] && [[ "${md5s3object}" == "${md5localobject}" ]]; then
         echo "skipping upload, checksums are identical"
       else
         echo "copying cache into s3"
-        aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz --metadata md5checksum=${md5localobject}
+        aws s3 cp "${filename}.tar.gz" "${s3_bucket}/${filename}.tar.gz" --metadata md5checksum="${md5localobject}"
       fi
     else
       echo "copying cache into s3"
-      aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz --metadata md5checksum=${md5localobject}
+      aws s3 cp "${filename}.tar.gz" "${s3_bucket}/${filename}.tar.gz" --metadata md5checksum="${md5localobject}"
     fi
   else
     echo "skipping, ${path} is not a directory"

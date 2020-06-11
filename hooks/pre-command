@@ -9,49 +9,49 @@ paths=( $(plugin_read_list CACHED_FOLDERS) )
 
 for path in "${paths[@]}"
 do
-  filename=`echo ${path} |sed 's/\//_/g'`
+  filename=`echo "${path}" |sed 's/\//_/g'`
 
   # remove trailing '-' from filename
-  if [[ ${filename: -1} == "_" ]]; then
-    filename=${filename::${#filename}-1}
+  if [[ "${filename: -1}" == "_" ]]; then
+    filename="${filename::${#filename}-1}"
   fi
 
   # remove '/' as it breaks S3 pathing
   # remove ' ' as it breaks aws s3 cp command
-  label=${BUILDKITE_LABEL//\//}
-  label=${label// /_}
+  label="${BUILDKITE_LABEL//\//}"
+  label="${label// /_}"
 
   s3_bucket="s3://${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}/${BUILDKITE_PIPELINE_SLUG}/${label}"
 
   # check if the tar file exists
-  if aws s3 ls ${s3_bucket}/${filename}.tar.gz; then
+  if aws s3 ls "${s3_bucket}/${filename}.tar.gz"; then
     echo "aws s3 cp ${filename}"
-    aws s3 cp ${s3_bucket}/${filename}.tar.gz .
+    aws s3 cp "${s3_bucket}/${filename}.tar.gz" .
 
     echo "comparing checksums..."
-    md5s3object=$(aws s3api head-object --bucket ${BUILDKITE_PLUGIN_CACHE_S3_BUCKET} --key ${BUILDKITE_PIPELINE_SLUG}/${label}/${filename}.tar.gz | jq -r '.Metadata.md5checksum')
-    md5localobject=$(openssl md5 ${filename}.tar.gz |base64)
+    md5s3object="$(aws s3api head-object --bucket "${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}" --key "${BUILDKITE_PIPELINE_SLUG}/${label}/${filename}.tar.gz" | jq -r '.Metadata.md5checksum')"
+    md5localobject="$(openssl md5 "${filename}.tar.gz" |base64)"
 
-    if [[ ${md5s3object} != "null" ]]; then
-      if [[ ${md5s3object} == ${md5localobject} ]]; then
+    if [[ "${md5s3object}" != "null" ]]; then
+      if [[ "${md5s3object}" == "${md5localobject}" ]]; then
         echo "untar into ${path}"
-        if [[ $OSTYPE != "msys" ]]; then
-          sudo tar -xzf ${filename}.tar.gz
+        if [[ "${OSTYPE}" != "msys" ]]; then
+          sudo tar -xzf "${filename}.tar.gz"
         else
-          tar -xzf ${filename}.tar.gz
+          tar -xzf "${filename}.tar.gz"
         fi
       else
         echo "checksums differ, skipping extraction"
       fi
     else
-      if ! tar -tf ${filename}.tar.gz > /dev/null; then
+      if ! tar -tf "${filename}.tar.gz" > /dev/null; then
         echo "tarball cannot be opened, may be corrupted, skipping extraction"
       else
         echo "untar into ${path}"
         if [[ $OSTYPE != "msys" ]]; then
-          sudo tar -xzf ${filename}.tar.gz
+          sudo tar -xzf "${filename}.tar.gz"
         else
-          tar -xzf ${filename}.tar.gz
+          tar -xzf "${filename}.tar.gz"
         fi
       fi
     fi
