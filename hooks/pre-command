@@ -29,15 +29,12 @@ do
   if [[ ${rc} -eq 0 ]]; then
     echo "aws s3 cp ${filename}"
     aws s3 cp ${s3_bucket}/${filename}.tar.gz .
-    
-    # check if the shasum file exists
-    aws s3 ls ${s3_bucket}/${filename}.sha256sum
-    rc=$?
-    if [[ ${rc} -eq 0 ]]; then
-      aws s3 cp ${s3_bucket}/${filename}.sha256sum .
-      shasum -a 256 ${filename}.tar.gz > tmp.sha256sum
 
-      if cmp -s tmp.sha256sum ${filename}.sha256sum; then
+    md5s3object=$(aws s3api head-object --bucket ${BUILDKITE_PLUGIN_CACHE_S3_BUCKET} --key ${BUILDKITE_PIPELINE_SLUG}/${label}/${filename}.tar.gz | jq -r '.Metadata.md5checksum')
+    md5localobject=$(md5 ${filename}.tar.gz |base64)
+
+    if [[ ${md5s3object} != "null" ]]
+      if [[ ${md5s3object} == ${md5localobject} ]]; then
         echo "untar into ${path}"
         if [[ $OSTYPE != "msys" ]] ; then
           sudo tar -xzf ${filename}.tar.gz
@@ -48,7 +45,7 @@ do
         echo "tarball may have been changed or corrupted, skipping extraction"
       fi
     else
-      if ! tar -tf vendor.tar.gz > /dev/null; then
+      if ! tar -tf ${filename}.tar.gz > /dev/null; then
         echo "tarball cannot be opened, may be corrupted, skipping extraction"
       else
         echo "untar into ${path}"

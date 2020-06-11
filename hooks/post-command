@@ -26,9 +26,6 @@ do
       tar -czf ${filename}.tar.gz ${path}
     fi
 
-    echo "getting sha256sum of ${filename}.tar.gz"
-    shasum -a 256 ${filename}.tar.gz > tmp.sha256sum
-
     # remove '/' as it breaks S3 pathing
     # remove ' ' as it breaks aws s3 cp command
     label=${BUILDKITE_LABEL//\//}
@@ -36,21 +33,21 @@ do
 
     s3_bucket="s3://${BUILDKITE_PLUGIN_CACHE_S3_BUCKET}/${BUILDKITE_PIPELINE_SLUG}/${label}"
 
-    aws s3 ls ${s3_bucket}/${filename}.sha256sum
+    aws s3 ls ${s3_bucket}/${filename}.tar.gz
     rc=$?
     if [[ ${rc} -eq 0 ]]; then
-      aws s3 cp ${s3_bucket}/${filename}.sha256sum .
-      if cmp -s tmp.sha256sum ${filename}.sha256sum; then
-        echo "skipping upload, shasums are identical"
+      md5s3object=$(aws s3api head-object --bucket ${BUILDKITE_PLUGIN_CACHE_S3_BUCKET} --key ${BUILDKITE_PIPELINE_SLUG}/${label}/${filename}.tar.gz | jq -r '.Metadata.md5checksum')
+      md5localobject=$(md5 ${filename}.tar.gz |base64)
+
+      if [[ ${md5s3object} == ${md5localobject} ]]; then
+        echo "skipping upload, checksums are identical"
       else
-        echo "copying files into s3"
-        aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz
-        aws s3 cp tmp.sha256sum ${s3_bucket}/${filename}.sha256sum
+        echo "copying cache into s3"
+        aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz --metadata md5checksum=${md5localobject}
       fi
     else
-      echo "copying files into s3"
-      aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz
-      aws s3 cp tmp.sha256sum ${s3_bucket}/${filename}.sha256sum
+      echo "copying cache into s3"
+      aws s3 cp ${filename}.tar.gz ${s3_bucket}/${filename}.tar.gz --metadata md5checksum=${md5localobject}
     fi
   else
     echo "skipping, ${path} is not a directory"
