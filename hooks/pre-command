@@ -33,10 +33,10 @@ do
     md5s3object=$(aws s3api head-object --bucket ${BUILDKITE_PLUGIN_CACHE_S3_BUCKET} --key ${BUILDKITE_PIPELINE_SLUG}/${label}/${filename}.tar.gz | jq -r '.Metadata.md5checksum')
     md5localobject=$(md5 ${filename}.tar.gz |base64)
 
-    if [[ ${md5s3object} != "null" ]]
+    if [[ ${md5s3object} != "null" ]]; then
       if [[ ${md5s3object} == ${md5localobject} ]]; then
         echo "untar into ${path}"
-        if [[ $OSTYPE != "msys" ]] ; then
+        if [[ $OSTYPE != "msys" ]]; then
           sudo tar -xzf ${filename}.tar.gz
         else
           tar -xzf ${filename}.tar.gz
@@ -49,7 +49,7 @@ do
         echo "tarball cannot be opened, may be corrupted, skipping extraction"
       else
         echo "untar into ${path}"
-        if [[ $OSTYPE != "msys" ]] ; then
+        if [[ $OSTYPE != "msys" ]]; then
           sudo tar -xzf ${filename}.tar.gz
         else
           tar -xzf ${filename}.tar.gz
