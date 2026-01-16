@@ -33,3 +33,6 @@ Example: `.vendor/`
 The bucket in S3 which is used to push and pull the cached_folders into.
 
 Example: `my-bucket`
+
+# Copyright
+See [COPYRIGHT.md](./COPYRIGHT.md).
